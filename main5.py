@@ -132,7 +132,7 @@ def save_doubt(user_data, doubt_text, priority):
     doubts_df.to_csv(DOUBTS_CSV, index=False)
 
 def update_doubt_reply(doubt_id, reply_message, lead_name):
-    """Update doubt with team lead's reply"""
+    """Update doubt with tech lead's reply"""
     doubts_df = pd.read_csv(DOUBTS_CSV)
     
     # Find the doubt and update it
@@ -149,14 +149,34 @@ def user_registration_page():
     st.title("🚀 Welcome to Standup Reports")
     st.markdown("---")
     
-    tab1, tab2, tab3 = st.tabs(["👤 New User Registration", "🔐 Existing User Login", "👥 Team Lead Login"])
+    tab1, tab2, tab3 = st.tabs(["🔐 Developer Login", "👤 New Developer Registration", "👥 Tech Lead Login"])
     
     with tab1:
+        st.subheader("Login with Existing ID")
+        
+        with st.form("login_form"):
+            user_id = st.text_input("Developer ID", placeholder="Enter your developer ID")
+            login_submitted = st.form_submit_button("Login", use_container_width=True)
+            
+            if login_submitted:
+                if user_id:
+                    user_data = get_user_by_id(user_id)
+                    if user_data is not None:
+                        st.session_state.user_data = user_data.to_dict()
+                        st.session_state.logged_in = True
+                        st.success(f"Welcome back {user_data['name']}!")
+                        st.rerun()
+                    else:
+                        st.error("Developer ID not found! Please register first.")
+                else:
+                    st.error("Please enter your Developer ID.")
+    
+    with tab2:
         st.subheader("Register Your Details")
         
         with st.form("registration_form"):
             name = st.text_input("Full Name*", placeholder="Enter your full name")
-            user_id = st.text_input("Employee ID*", placeholder="Enter your employee ID")
+            user_id = st.text_input("Developer ID*", placeholder="Enter your developer ID")
             team_number = st.selectbox(
                 "Select Your Team*", 
                 options=list(TEAMS_CONFIG.keys()),
@@ -170,7 +190,7 @@ def user_registration_page():
                     # Check if user already exists
                     existing_user = get_user_by_id(user_id)
                     if existing_user is not None:
-                        st.error(f"User ID '{user_id}' already exists! Please use the login tab.")
+                        st.error(f"Developer ID '{user_id}' already exists! Please use the login tab.")
                     else:
                         save_user(user_id, name, team_number)
                         st.session_state.user_data = {
@@ -184,29 +204,9 @@ def user_registration_page():
                 else:
                     st.error("Please fill in all required fields.")
     
-    with tab2:
-        st.subheader("Login with Existing ID")
-        
-        with st.form("login_form"):
-            user_id = st.text_input("Employee ID", placeholder="Enter your employee ID")
-            login_submitted = st.form_submit_button("Login", use_container_width=True)
-            
-            if login_submitted:
-                if user_id:
-                    user_data = get_user_by_id(user_id)
-                    if user_data is not None:
-                        st.session_state.user_data = user_data.to_dict()
-                        st.session_state.logged_in = True
-                        st.success(f"Welcome back {user_data['name']}!")
-                        st.rerun()
-                    else:
-                        st.error("User ID not found! Please register first.")
-                else:
-                    st.error("Please enter your Employee ID.")
-    
     with tab3:
-        st.subheader("Team Lead Direct Login")
-        st.info("👥 Team leads can login directly here with their team number and password")
+        st.subheader("Tech Lead Direct Login")
+        st.info("👥 Tech leads can login directly here with their team number and password")
         
         with st.form("lead_direct_login"):
             team_selection = st.selectbox(
@@ -215,36 +215,36 @@ def user_registration_page():
                 format_func=lambda x: f"Team {x} - {TEAMS_CONFIG[x]['lead_name']}"
             )
             
-            lead_password = st.text_input("Team Lead Password", type="password", 
-                                        placeholder="Enter your team lead password")
+            lead_password = st.text_input("Tech Lead Password", type="password", 
+                                        placeholder="Enter your tech lead password")
             
-            lead_login_submitted = st.form_submit_button("Login as Team Lead", use_container_width=True)
+            lead_login_submitted = st.form_submit_button("Login as Tech Lead", use_container_width=True)
             
             if lead_login_submitted:
                 if lead_password:
-                    # Verify team lead password
+                    # Verify tech lead password
                     if lead_password == TEAM_LEAD_PASSWORDS[team_selection]:
                         st.session_state.user_data = {
                             'user_id': f"LEAD_{team_selection}",
                             'name': TEAMS_CONFIG[team_selection]['lead_name'],
                             'team_number': team_selection,
-                            'is_team_lead': True
+                            'is_tech_lead': True
                         }
                         st.session_state.logged_in = True
                         st.session_state.lead_authenticated = True
-                        st.success(f"Welcome Team Lead {TEAMS_CONFIG[team_selection]['lead_name']}!")
+                        st.success(f"Welcome Tech Lead {TEAMS_CONFIG[team_selection]['lead_name']}!")
                         st.rerun()
                     else:
-                        st.error("❌ Invalid team lead password!")
+                        st.error("❌ Invalid tech lead password!")
                 else:
-                    st.error("Please enter your team lead password.")
+                    st.error("Please enter your tech lead password.")
 
 def submit_standup_page():
     """Standup submission page"""
     user_data = st.session_state.user_data
     
     st.title("📝 Daily Standup Submission")
-    st.markdown(f"**User:** {user_data['name']} | **Team:** {user_data['team_number']}")
+    st.markdown(f"**Developer:** {user_data['name']} | **Team:** {user_data['team_number']}")
     st.markdown("---")
     
     # Check if user already submitted today
@@ -308,7 +308,7 @@ def submit_doubt_page():
     user_data = st.session_state.user_data
     
     st.title("❓ Submit Your Doubts")
-    st.markdown(f"**User:** {user_data['name']} | **Team:** {user_data['team_number']}")
+    st.markdown(f"**Developer:** {user_data['name']} | **Team:** {user_data['team_number']}")
     st.markdown("---")
     
     # Show user's existing doubts and replies
@@ -324,11 +324,11 @@ def submit_doubt_page():
                 st.write(f"**Status:** {doubt['status']}")
                 st.write(f"**Submitted:** {doubt['timestamp']}")
                 
-                # Show team lead's reply if any
+                # Show tech lead's reply if any
                 if pd.notna(doubt['reply_message']) and doubt['reply_message'].strip():
-                    st.write(f"**Team Lead's Reply:** {doubt['reply_message']}")
+                    st.write(f"**Tech Lead's Reply:** {doubt['reply_message']}")
                 elif doubt['status'] == 'Open':
-                    st.info("⏳ Waiting for team lead's response...")
+                    st.info("⏳ Waiting for tech lead's response...")
         
         st.markdown("---")
     
@@ -353,34 +353,34 @@ def submit_doubt_page():
             if doubt_text:
                 save_doubt(user_data, doubt_text, priority)
                 st.success("✅ Your doubt has been submitted successfully!")
-                st.info("Your team lead will review and respond to your question.")
+                st.info("Your tech lead will review and respond to your question.")
             else:
                 st.error("Please describe your doubt or question.")
 
 def team_lead_dashboard():
-    """Team lead dashboard with password protection"""
-    st.title("👥 Team Lead Dashboard")
+    """Tech lead dashboard with password protection"""
+    st.title("👥 Tech Lead Dashboard")
     st.markdown("---")
     
-    # Check if user is already authenticated as team lead from direct login
-    if st.session_state.user_data.get('is_team_lead', False):
+    # Check if user is already authenticated as tech lead from direct login
+    if st.session_state.user_data.get('is_tech_lead', False):
         st.session_state.lead_authenticated = True
     
-    # Password authentication for regular users accessing team lead dashboard
+    # Password authentication for regular users accessing tech lead dashboard
     if 'lead_authenticated' not in st.session_state:
         st.session_state.lead_authenticated = False
     
     if not st.session_state.lead_authenticated:
-        st.subheader("🔐 Team Lead Authentication")
-        st.info("💡 Regular users need to authenticate with team lead password to access this dashboard")
-        st.warning("⚠️ Only team leads should access this dashboard. Please contact your team lead for credentials.")
+        st.subheader("🔐 Tech Lead Authentication")
+        st.info("💡 Regular developers need to authenticate with tech lead password to access this dashboard")
+        st.warning("⚠️ Only tech leads should access this dashboard. Please contact your tech lead for credentials.")
         
         with st.form("lead_auth_form"):
-            password = st.text_input("Enter Team Lead Password", type="password")
-            auth_submitted = st.form_submit_button("Login as Team Lead")
+            password = st.text_input("Enter Tech Lead Password", type="password")
+            auth_submitted = st.form_submit_button("Login as Tech Lead")
             
             if auth_submitted:
-                # Check if password matches any team lead password
+                # Check if password matches any tech lead password
                 valid_password = False
                 for team_id in TEAM_LEAD_PASSWORDS.keys():
                     if password == TEAM_LEAD_PASSWORDS[team_id]:
@@ -396,15 +396,15 @@ def team_lead_dashboard():
                     st.error("❌ Invalid password!")
         return
     
-    # Authenticated team lead dashboard
-    st.success("🎉 Welcome Team Lead!")
+    # Authenticated tech lead dashboard
+    st.success("🎉 Welcome Tech Lead!")
     
     tab1, tab2, tab3, tab4 = st.tabs(["📝 Standups", "❓ Doubts", "📥 Downloads", "📊 All Teams Overview"])
     
     with tab1:
         st.subheader("Standups Management")
         
-        # Get the team lead's team number
+        # Get the tech lead's team number
         lead_team = st.session_state.user_data.get('team_number', 1)
         
         # Team filter - default to lead's team, but allow selection of other teams
@@ -454,9 +454,9 @@ def team_lead_dashboard():
     with tab2:
         st.subheader("Doubts Management")
         
-        # Get the team lead's team number
+        # Get the tech lead's team number
         lead_team = st.session_state.user_data.get('team_number', 1)
-        lead_name = st.session_state.user_data.get('name', 'Team Lead')
+        lead_name = st.session_state.user_data.get('name', 'Tech Lead')
         
         # Load doubts
         doubts_df = pd.read_csv(DOUBTS_CSV)
@@ -505,7 +505,7 @@ def team_lead_dashboard():
                         if pd.notna(doubt['reply_message']) and doubt['reply_message'].strip():
                             st.write(f"**Reply:** {doubt['reply_message']}")
                         
-                        # Reply section for team leads
+                        # Reply section for tech leads
                         if doubt['status'] in ['Open', 'Replied']:
                             st.markdown("---")
                             st.write("**Add/Update Reply:**")
@@ -587,19 +587,19 @@ def team_lead_dashboard():
                 st.write("No doubt data available")
         
         with col3:
-            st.write("**All Users**")
+            st.write("**All Developers**")
             if not users_df.empty:
                 csv_data = users_df.to_csv(index=False)
                 st.download_button(
-                    label="📥 Download All Users",
+                    label="📥 Download All Developers",
                     data=csv_data,
-                    file_name=f"all_users_{datetime.now().strftime('%Y-%m-%d')}.csv",
+                    file_name=f"all_developers_{datetime.now().strftime('%Y-%m-%d')}.csv",
                     mime="text/csv",
-                    key="download_all_users"
+                    key="download_all_developers"
                 )
                 st.write(f"Total records: {len(users_df)}")
             else:
-                st.write("No user data available")
+                st.write("No developer data available")
         
         # Team-wise downloads
         st.markdown("---")
@@ -721,7 +721,7 @@ def team_lead_dashboard():
             st.metric("Total Teams", len(TEAMS_CONFIG))
         
         with col2:
-            st.metric("Total Users", len(users_df))
+            st.metric("Total Developers", len(users_df))
         
         with col3:
             today_standups = standups_df[standups_df['date'] == date.today().strftime('%Y-%m-%d')]
@@ -781,22 +781,22 @@ def main():
     st.sidebar.markdown(f"**Welcome:** {st.session_state.user_data['name']}")
     st.sidebar.markdown(f"**Team:** {st.session_state.user_data['team_number']}")
     
-    # Show role if team lead
-    if st.session_state.user_data.get('is_team_lead', False):
-        st.sidebar.markdown("**Role:** 👥 Team Lead")
+    # Show role if tech lead
+    if st.session_state.user_data.get('is_tech_lead', False):
+        st.sidebar.markdown("**Role:** 👥 Tech Lead")
     
     st.sidebar.markdown("---")
     
     # Different navigation options based on role
-    if st.session_state.user_data.get('is_team_lead', False):
+    if st.session_state.user_data.get('is_tech_lead', False):
         page = st.sidebar.selectbox(
             "Choose a page:",
-            ["👥 Team Lead Dashboard"]
+            ["👥 Tech Lead Dashboard"]
         )
     else:
         page = st.sidebar.selectbox(
             "Choose a page:",
-            ["📝 Submit Standup", "❓ Submit Doubt", "👥 Team Lead Dashboard"]
+            ["📝 Submit Standup", "❓ Submit Doubt", "👥 Tech Lead Dashboard"]
         )
     
     # Logout button
@@ -810,7 +810,7 @@ def main():
         submit_standup_page()
     elif page == "❓ Submit Doubt":
         submit_doubt_page()
-    elif page == "👥 Team Lead Dashboard":
+    elif page == "👥 Tech Lead Dashboard":
         team_lead_dashboard()
 
 if __name__ == "__main__":
