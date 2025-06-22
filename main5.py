@@ -18,24 +18,25 @@ TEAMS_CONFIG = {
     10: {"lead_name": "GANNARAM DHRUV"}
 }
 
-# Team lead passwords (in production, these should be stored securely)
-TEAM_LEAD_PASSWORDS = {
-    1: "lead123",
-    2: "lead456", 
-    3: "lead789",
-    4: "lead101",
-    5: "lead102",
-    6: "lead103",
-    7: "lead104",
-    8: "lead105",
-    9: "lead106",
-    10: "lead107"
-}
-
 # CSV file paths
 USERS_CSV = "users.csv"
 STANDUPS_CSV = "standups.csv"
 DOUBTS_CSV = "doubts.csv"
+
+def get_team_lead_password(team_number):
+    """Get tech lead password from Streamlit secrets"""
+    try:
+        # Access passwords from Streamlit secrets
+        passwords = st.secrets.get("team_lead_passwords", {})
+        return passwords.get(str(team_number))
+    except Exception as e:
+        st.error(f"Error accessing credentials: {e}")
+        return None
+
+def verify_tech_lead_password(team_number, password):
+    """Verify tech lead password against stored credentials"""
+    stored_password = get_team_lead_password(team_number)
+    return stored_password == password
 
 def init_csv_files():
     """Initialize CSV files if they don't exist"""
@@ -223,7 +224,7 @@ def user_registration_page():
             if lead_login_submitted:
                 if lead_password:
                     # Verify tech lead password
-                    if lead_password == TEAM_LEAD_PASSWORDS[team_selection]:
+                    if verify_tech_lead_password(team_selection, lead_password):
                         st.session_state.user_data = {
                             'user_id': f"LEAD_{team_selection}",
                             'name': TEAMS_CONFIG[team_selection]['lead_name'],
@@ -382,8 +383,8 @@ def team_lead_dashboard():
             if auth_submitted:
                 # Check if password matches any tech lead password
                 valid_password = False
-                for team_id in TEAM_LEAD_PASSWORDS.keys():
-                    if password == TEAM_LEAD_PASSWORDS[team_id]:
+                for team_id in TEAMS_CONFIG.keys():
+                    if verify_tech_lead_password(team_id, password):
                         st.session_state.lead_authenticated = True
                         st.session_state.lead_team_access = team_id
                         valid_password = True
