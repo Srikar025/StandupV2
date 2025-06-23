@@ -358,6 +358,31 @@ def submit_doubt_page():
             else:
                 st.error("Please describe your doubt or question.")
 
+def change_team_page():
+    """Allow developer to change their team assignment"""
+    user_data = st.session_state.user_data
+    st.subheader("🔄 Change Your Team")
+    st.info(f"Your current team: Team {user_data['team_number']}")
+    
+    with st.form("change_team_form"):
+        new_team = st.selectbox(
+            "Select New Team",
+            options=list(TEAMS_CONFIG.keys()),
+            index=list(TEAMS_CONFIG.keys()).index(user_data['team_number']),
+            format_func=lambda x: f"Team {x} - {TEAMS_CONFIG[x]['lead_name']}"
+        )
+        submitted = st.form_submit_button("Update Team", use_container_width=True)
+        if submitted:
+            if new_team != user_data['team_number']:
+                users_df = load_users()
+                users_df.loc[users_df['user_id'] == user_data['user_id'], 'team_number'] = new_team
+                users_df.to_csv(USERS_CSV, index=False)
+                st.session_state.user_data['team_number'] = new_team
+                st.success(f"Team updated to Team {new_team}!")
+                st.rerun()
+            else:
+                st.info("You are already in this team.")
+
 def team_lead_dashboard():
     """Tech lead dashboard with password protection"""
     st.title("👥 Tech Lead Dashboard")
@@ -797,7 +822,7 @@ def main():
     else:
         page = st.sidebar.selectbox(
             "Choose a page:",
-            ["📝 Submit Standup", "❓ Submit Doubt", "👥 Tech Lead Dashboard"]
+            ["📝 Submit Standup", "❓ Submit Doubt", "🔄 Change Team", "👥 Tech Lead Dashboard"]
         )
     
     # Logout button
@@ -811,6 +836,8 @@ def main():
         submit_standup_page()
     elif page == "❓ Submit Doubt":
         submit_doubt_page()
+    elif page == "🔄 Change Team":
+        change_team_page()
     elif page == "👥 Tech Lead Dashboard":
         team_lead_dashboard()
 
